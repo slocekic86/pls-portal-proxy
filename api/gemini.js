@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     // Call Google Gemini API directly using the dynamic "gemini-flash" alias
     // This will always route to the latest stable Flash model automatically.
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
