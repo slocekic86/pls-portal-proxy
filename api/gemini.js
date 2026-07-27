@@ -26,9 +26,10 @@ export default async function handler(req, res) {
   try {
     const { prompt } = req.body;
     
-    // Call Google Gemini API directly from Vercel's US server
+    // Call Google Gemini API directly using the dynamic "gemini-flash" alias
+    // This will always route to the latest stable Flash model automatically.
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
