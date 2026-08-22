@@ -1,47 +1,52 @@
 export default async function handler(req, res) {
-  const origin = req.headers.origin || "";
-  
-  // 1. Check if the origin is allowed
-  const isAllowedOrigin = origin.endsWith(".netlify.app") || origin.startsWith("http://localhost");
-  const corsOrigin = isAllowedOrigin ? origin : "https://forbidden.local";
+    // 1. Handle CORS so both Netlify apps can connect without errors
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
-  // Handle CORS preflight
-  res.setHeader("Access-Control-Allow-Origin", corsOrigin);
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    // Respond successfully to CORS preflight checks
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+    }
 
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
+    try {
+        // Ensure you have this environment variable saved in your Vercel Dashboard!
+        const apiKey = process.env.GEMINI_API_KEY; 
+        
+        // Default model for the REST API
+        const model = "gemini-2.5-flash"; 
+        
+        let payload = req.body;
 
-  // 2. Block unapproved origins
-  if (!isAllowedOrigin) {
-    return res.status(403).json({ error: { message: "Forbidden: Access Denied" } });
-  }
+        // 2. Compatibility check: 
+        // If the request comes from the 'PLS Staff Portal', it only has a { prompt: "..." }.
+        // We must reformat it to match the standard Gemini REST structure.
+        if (payload.prompt && !payload.contents) {
+            payload = {
+                contents: [{
+                    role: "user",
+                    parts: [{ text: payload.prompt }]
+                }]
+            };
+        }
+        
+        // (If the request comes from the Exam Generator, it already has payload.contents and is ready to go!)
 
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: { message: "Method Not Allowed" } });
-  }
+        // 3. Forward the standard payload directly to Google's REST API
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
 
-  try {
-    const { prompt } = req.body;
-    
-    // Call Google Gemini API directly using the dynamic "gemini-flash" alias
-    // This will always route to the latest stable Flash model automatically.
-    const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-        }),
-      }
-    );
+        // 4. Send the response back to your frontend
+        const data = await response.json();
+        res.status(response.status).json(data);
 
-    const data = await geminiResponse.json();
-    return res.status(200).json(data);
-  } catch (err) {
-    return res.status(500).json({ error: { message: err.message } });
-  }
+    } catch (error) {
+        console.error("Vercel Proxy Error:", error);
+        res.status(500).json({ error: { message: error.message || "Internal Server Error" } });
+    }
 }
