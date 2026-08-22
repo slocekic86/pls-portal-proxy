@@ -16,7 +16,7 @@ export default async function handler(req, res) {
         const apiKey = process.env.GEMINI_API_KEY; 
         
         // Default model for the REST API
-        const model = "gemini-2.5-flash"; 
+        const model = "gemini-3.6-flash"; 
         
         let payload = req.body;
 
