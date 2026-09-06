@@ -1,17 +1,23 @@
 export default async function handler(req, res) {
-    // 1. Security Check: Only allow requests from Netlify domains
-    const origin = req.headers.origin;
+    // 1. Security Check: Allow Netlify, Localhost (for testing), and Sandbox origins
+    const origin = req.headers.origin || "*"; // Fallback to * if no origin header is present
     
-    // If there is no origin, or if it doesn't end with netlify.app, block it.
-    if (!origin || !origin.endsWith('netlify.app')) {
+    const isAllowedOrigin = 
+        origin === "*" || 
+        origin.endsWith('netlify.app') || 
+        origin.includes('localhost') || 
+        origin.includes('127.0.0.1') ||
+        origin.includes('googleusercontent'); // Allows standard IDE sandboxes
+
+    if (!isAllowedOrigin) {
         return res.status(403).json({ 
-            error: { message: "Unauthorized: Requests must originate from a trusted Netlify domain." } 
+            error: { message: "Unauthorized: Requests must originate from a trusted domain." } 
         });
     }
 
-    // 2. Handle CORS dynamically for the verified Netlify origin
+    // 2. Handle CORS dynamically for the allowed origin
     res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', origin); // Uses the specific netlify app URL instead of '*'
+    res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
     res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
