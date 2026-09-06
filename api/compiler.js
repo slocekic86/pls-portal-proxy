@@ -1,10 +1,21 @@
 export default async function handler(req, res) {
-    // Enable CORS if your IDE is hosted on a different domain than Vercel
+    // 1. Security Check: Only allow requests from Netlify domains
+    const origin = req.headers.origin;
+    
+    // If there is no origin, or if it doesn't end with netlify.app, block it.
+    if (!origin || !origin.endsWith('netlify.app')) {
+        return res.status(403).json({ 
+            error: { message: "Unauthorized: Requests must originate from a trusted Netlify domain." } 
+        });
+    }
+
+    // 2. Handle CORS dynamically for the verified Netlify origin
     res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'OPTIONS,POST');
+    res.setHeader('Access-Control-Allow-Origin', origin); // Uses the specific netlify app URL instead of '*'
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
     res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
+    // Respond successfully to CORS preflight checks
     if (req.method === 'OPTIONS') {
         res.status(200).end();
         return;
