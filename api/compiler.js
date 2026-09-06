@@ -20,11 +20,17 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'No code provided.' });
     }
 
+    // Extract the requested model from the frontend, if provided
+    const { model } = req.body;
+
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY; // Ensure this is set in your Vercel Environment Variables
     
-    // We use gemini-1.5-flash as it is faster and cheaper for translation tasks, 
-    // or gemini-1.5-pro if you need complex algorithmic logic handling.
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    // Dynamic Model Selection:
+    // 1. Uses what the frontend requests. 
+    // 2. Falls back to a Vercel Environment Variable (GEMINI_MODEL) if set.
+    // 3. Defaults to 'gemini-3.6-flash' if neither is provided.
+    const selectedModel = model || process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${GEMINI_API_KEY}`;
 
     const systemInstruction = `You are a strict compiler that translates Cambridge International AS & A Level (9618) / IGCSE (0478) Pseudocode into executable JavaScript.
 Your task is to translate the pseudocode into equivalent asynchronous JavaScript logic.
